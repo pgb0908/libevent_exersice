@@ -11,6 +11,8 @@
 #include <event2/util.h>
 #include <event2/event.h>
 
+// https://libevent.org/libevent-book/
+
 static const char MESSAGE[] = "Hello, World!\n";
 static const unsigned short PORT = 9995;
 
