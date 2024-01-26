@@ -13,6 +13,29 @@
 
 // https://libevent.org/libevent-book/
 
+#define EVENT_LOG_DEBUG 0
+#define EVENT_LOG_MSG   1
+#define EVENT_LOG_WARN  2
+#define EVENT_LOG_ERR   3
+
+typedef void (*event_log_cb)(int severity, const char *msg);
+
+void event_set_log_callback(event_log_cb cb);
+
+// 사용자 정의 로깅 콜백 함수
+void custom_log_callback(int severity, const char* msg) {
+    // severity에 따라 로그 메시지를 다르게 처리할 수 있습니다.
+    // 예를 들어, severity가 EVENT_LOG_ERR일 때는 에러 메시지를 출력하고,
+    // 그 외의 경우에는 일반 메시지를 출력할 수 있습니다.
+    if (severity == EVENT_LOG_DEBUG) {
+        std::cerr << "Error: " << msg << std::endl;
+    } else {
+        std::cout << "Info: " << msg << std::endl;
+    }
+}
+
+
+
 static const char MESSAGE[] = "Hello, World!\n";
 static const unsigned short PORT = 9995;
 
@@ -76,6 +99,10 @@ int main() {
     struct event_base *base;  // event_base: event들을 관리하기 위한 구조체
     struct evconnlistener *listener;
     struct event *signal_event; // event: 특정 조건에서 발생되는 사건
+
+
+    // 로그 설정
+    event_set_log_callback(custom_log_callback);
 
     base = event_base_new();
     if (!base) {
