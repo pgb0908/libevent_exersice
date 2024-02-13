@@ -54,20 +54,10 @@ accept_error_cb(struct evconnlistener *listener, void *ctx) {
 
 int
 main(int argc, char **argv) {
-
+    int port = 9990;
     struct event_base *base;     // event-loop를 생성할 부분
     struct evconnlistener *listener;
     struct sockaddr_in sin;
-
-    int port = 9990;
-
-    if (argc > 1) {
-        port = atoi(argv[1]);
-    }
-    if (port <= 0 || port > 65535) {
-        puts("Invalid port");
-        return 1;
-    }
 
     base = event_base_new();
     if (!base) {
