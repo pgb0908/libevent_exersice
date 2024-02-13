@@ -18,6 +18,6 @@ find_package(Libevent REQUIRED)
 add_subdirectory(basic_helloworld)
 add_subdirectory(pipe)
 add_subdirectory(simple_http)
-add_subdirectory(cpp_style)
+add_subdirectory(echo_server)
 
 
