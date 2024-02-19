@@ -45,7 +45,7 @@ conn_writecb(struct bufferevent *bev, void *user_data)
     struct evbuffer *output = bufferevent_get_output(bev);
     if (evbuffer_get_length(output) == 0) {
         printf("flushed answer\n");
-        bufferevent_free(bev);
+        //bufferevent_free(bev);
     }
 }
 
@@ -80,6 +80,9 @@ static void listener_cb(struct evconnlistener *listener, evutil_socket_t fd,
     bufferevent_disable(bev, EV_READ);
 
     bufferevent_write(bev, MESSAGE, strlen(MESSAGE));
+
+    struct timeval delay = { 1, 0 };
+    bufferevent_set_timeouts(bev, NULL, &delay);
 }
 
 

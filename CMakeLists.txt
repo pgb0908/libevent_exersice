@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.26)
 project(libevent_exercise)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
 INCLUDE_DIRECTORIES(
         /usr/local/include/
@@ -19,5 +19,7 @@ add_subdirectory(basic_helloworld)
 add_subdirectory(pipe)
 add_subdirectory(simple_http)
 add_subdirectory(cpp_style)
+add_subdirectory(c_style)
+add_subdirectory(event_sample)
 
 
