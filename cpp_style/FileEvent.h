@@ -48,6 +48,7 @@ public:
     FileEvent(Dispatcher& dispatcher, int fd,  FileReadyCb cb, FileTriggerType trigger, uint32_t events);
 
     void setEnabled(uint32_t events);
+    void cancelEvent();
 
 private:
     void assignEvents(uint32_t events, event_base* base);

@@ -15,6 +15,7 @@
 #include <ctime>
 #include <event.h> // libevent
 #include <iostream>
+#include <sstream>
 
 
 #define MAX 80
@@ -98,9 +99,20 @@ void on_read_cb(int fd, short events, void *arg)
 
 }
 
-int main() {
+class Connection {
+public:
+    Connection() = default;
 
-    std::vector<FileEventPtr> fileEventVector;
+    int fd_;
+    event ev_read_;
+    sockaddr_in client_addr_;
+    FileEventPtr fileEventPtr_;
+};
+
+using connPtr = std::shared_ptr<Connection>;
+
+int main() {
+    std::unordered_map<std::string, connPtr> conn_map;
 
     // 1. Setup server
     int port = 9990;
@@ -122,13 +134,13 @@ int main() {
     if ((listen(server_fd, LISTENQEUE)) != 0)
         err_sys("Listen failed...\n");
 
+
     Dispatcher dispatcher = Dispatcher();
     auto server_event = dispatcher.createFileEvent(server_fd,
                                                    [&](uint32_t) {
                                                        int client_fd;
                                                        struct sockaddr_in client_addr;
                                                        socklen_t client_len = sizeof(client_addr);
-                                                       struct conn *connection;
 
                                                        /* Accept the new connection. accept() returns a client socket */
                                                        client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
@@ -139,35 +151,40 @@ int main() {
                                                        }
 
                                                        /** Now, handle the connection by adding it to libevent for read */
-                                                       connection = static_cast<conn *>(malloc(sizeof(struct conn *)));
-                                                       connection->fd = client_fd;
-                                                       connection->client_addr = client_addr; // just add it for fun
-                              /*                         event_set(&connection->ev_read, client_fd, EV_READ | EV_PERSIST, on_read_cb, connection);
-                                                       event_base_set(&dispatcher.base(), &connection->ev_read);
-                                                       if (event_add(&connection->ev_read, NULL) < 0)
-                                                           err_sys("Failed to add client FD to libevent.");*/
+                                                       connPtr conn = std::make_shared<Connection>();
+                                                       conn->fd_ = client_fd;
+                                                       conn->client_addr_ = client_addr; // just add it for fun
 
 
                                                        auto event = dispatcher.createFileEvent(client_fd,
-                                                                                               [connection, client_fd](uint32_t events) {
+                                                                                               [connection = conn, &conn_map, &dispatcher](uint32_t events) {
                                                                                                    char rbuff[8196];
                                                                                                    bzero(rbuff, sizeof(rbuff));
 
                                                                                                    // read data from FD, valdiate if it's a closed connection.
-                                                                                                   if (read(client_fd, rbuff, sizeof(rbuff)) == 0)
+                                                                                                   if (read(connection->fd_, rbuff, sizeof(rbuff)) == 0)
                                                                                                    {
                                                                                                        printf("Client [%s:%d] disconnected\n",
-                                                                                                              inet_ntoa(connection->client_addr.sin_addr),
-                                                                                                              (int)ntohs(connection->client_addr.sin_port));
+                                                                                                              inet_ntoa(connection->client_addr_.sin_addr),
+                                                                                                              (int)ntohs(connection->client_addr_.sin_port));
                                                                                                        // Connection is closed, no need to watch again
-                                                                                                       event_del(&connection->ev_read);
-                                                                                                       close(client_fd);
-                                                                                                       free(connection);
+                                                                                                       auto remote_ip = inet_ntoa(connection->client_addr_.sin_addr);
+                                                                                                       auto remote_port = (int)ntohs(connection->client_addr_.sin_port);
+                                                                                                       std::stringstream ss;
+                                                                                                       ss << remote_ip << "_" << remote_port;
+                                                                                                       auto find_conn = conn_map.find(ss.str());
+
+                                                                                                       find_conn->second->fileEventPtr_->cancelEvent();
+                                                                                                       close(connection->fd_);
+
+                                                                                                       conn_map.erase(find_conn);
+                                                                                                       event_base_dump_events(&dispatcher.base(), stdout);
+
                                                                                                        return;
                                                                                                    }
                                                                                                    printf("Client [%s:%d] wrote: %s",
-                                                                                                          inet_ntoa(connection->client_addr.sin_addr),
-                                                                                                          (int)ntohs(connection->client_addr.sin_port),
+                                                                                                          inet_ntoa(connection->client_addr_.sin_addr),
+                                                                                                          (int)ntohs(connection->client_addr_.sin_port),
                                                                                                           rbuff);
 
                                                                                                    // write back to client.
@@ -177,16 +194,25 @@ int main() {
                                                                                                       snprintf(wbuff, sizeof(wbuff),
                                                                                                                "Hello from server - %.24s\r\n", ctime(&ticks));
                                                                                                    printf("Client [%s:%d] Server replied: %s",
-                                                                                                          inet_ntoa(connection->client_addr.sin_addr),
-                                                                                                          (int)ntohs(connection->client_addr.sin_port),
+                                                                                                          inet_ntoa(connection->client_addr_.sin_addr),
+                                                                                                          (int)ntohs(connection->client_addr_.sin_port),
                                                                                                           wbuff);
-                                                                                                   write(client_fd, wbuff, sizeof(wbuff));
+                                                                                                   write(connection->fd_, wbuff, sizeof(wbuff));
 
                                                                                                },
                                                                                                FileTriggerType::Level,
                                                                                                FileReadyType::Read);
 
-                                                       fileEventVector.push_back(std::move(event));
+
+                                                       conn->fileEventPtr_ = std::move(event);
+
+                                                       auto remote_ip = inet_ntoa(conn->client_addr_.sin_addr);
+                                                       auto remote_port = (int)ntohs(conn->client_addr_.sin_port);
+
+                                                       std::stringstream ss;
+                                                       ss << remote_ip << "_" << remote_port;
+                                                       conn_map.insert({ss.str(), conn});
+
 
                                                        printf("Client [%s:%d] connected\n",
                                                               inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));

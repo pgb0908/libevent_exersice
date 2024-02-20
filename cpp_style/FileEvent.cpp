@@ -83,4 +83,8 @@ void FileEvent::mergeInjectedEventsAndRunCb(uint32_t events) {
     cb_(events);
 }
 
+void FileEvent::cancelEvent() {
+    event_del(&raw_event_);
+}
+
 
