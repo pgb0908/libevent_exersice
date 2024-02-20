@@ -17,14 +17,12 @@
 #include <iostream>
 #include <sstream>
 
-
 #define MAX 80
 #define DEFAULT_PORT 9990
 #define TRUE 1
 #define FALSE 0
 #define SA struct sockaddr
 #define LISTENQEUE 1024
-
 
 void err_sys(const char *s) {
     perror(s);
@@ -57,47 +55,6 @@ void Connect(int socketfd, const struct sockaddr *serveraddr, int socketlen) {
     }
 }
 
-struct conn
-{
-    int fd;
-    struct event ev_read;
-    struct sockaddr_in client_addr;
-};
-
-
-void on_read_cb(int fd, short events, void *arg)
-{
-
-    struct conn *c = (struct conn *)arg;
-    char rbuff[8196];
-    bzero(rbuff, sizeof(rbuff));
-
-    // read data from FD, valdiate if it's a closed connection.
-    if (read(fd, rbuff, sizeof(rbuff)) == 0)
-    {
-        printf("Client [%s:%d] disconnected\n",
-               inet_ntoa(c->client_addr.sin_addr), (int)ntohs(c->client_addr.sin_port));
-        // Connection is closed, no need to watch again
-        event_del(&c->ev_read);
-        close(fd);
-        free(c);
-        return;
-    }
-    printf("Client [%s:%d] wrote: %s",
-           inet_ntoa(c->client_addr.sin_addr), (int)ntohs(c->client_addr.sin_port), rbuff);
-
-    // write back to client.
-    char wbuff[80];
-    bzero(wbuff, sizeof(wbuff));
-    time_t ticks = time(NULL);
-    snprintf(wbuff, sizeof(wbuff),
-             "Hello from server - %.24s\r\n", ctime(&ticks));
-    printf("Client [%s:%d] Server replied: %s",
-           inet_ntoa(c->client_addr.sin_addr), (int)ntohs(c->client_addr.sin_port), wbuff);
-    write(fd, wbuff, sizeof(wbuff));
-
-
-}
 
 class Connection {
 public:
@@ -110,6 +67,16 @@ public:
 };
 
 using connPtr = std::shared_ptr<Connection>;
+
+
+void showMap(std::unordered_map<std::string, connPtr>& map){
+    std::cout << "======================================" << std::endl;
+    std::cout << "map's size : " << map.size() << std::endl;
+    for(const auto& item : map){
+        std::cout << item.first << std::endl;
+    }
+    std::cout << "======================================" << std::endl;
+}
 
 int main() {
     std::unordered_map<std::string, connPtr> conn_map;
@@ -146,7 +113,7 @@ int main() {
                                                        client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
                                                        if (client_fd < 0)
                                                        {
-                                                           printf("Failed to connect to client\n");
+                                                           err_sys("Failed to connect to client\n");
                                                            return;
                                                        }
 
@@ -219,6 +186,7 @@ int main() {
 
 
                                                        event_base_dump_events(&dispatcher.base(), stdout);
+                                                       showMap(conn_map);
                                                    },
                                                    FileTriggerType::Level,
                                                    FileReadyType::Read);
