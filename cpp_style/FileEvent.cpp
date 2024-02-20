@@ -22,14 +22,6 @@ FileEvent::FileEvent(Dispatcher& dispatcher, int fd,  FileReadyCb cb,  FileTrigg
     assignEvents(events, &dispatcher.base());
     event_add(&raw_event_, nullptr);
 
-
-/*    event_set(&raw_event_, fd, EV_READ | EV_PERSIST,
-              on_accept_cb, &dispatcher.base());
-    event_base_set(&dispatcher.base(), &raw_event_);
-
-    if (event_add(&raw_event_, NULL) < 0)
-        std::cout  << "Failed to add server socket in libevent" << std::endl;*/
-
 }
 
 void FileEvent::assignEvents(uint32_t events, event_base *base) {
