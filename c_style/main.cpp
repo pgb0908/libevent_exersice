@@ -165,29 +165,30 @@ int main(int argc, char **argv)
     serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
     Bind(server_fd, (SA *)&serveraddr, sizeof(serveraddr));
 
-    if ((listen(server_fd, LISTENQEUE)) != 0)
+    if ((listen(server_fd, LISTENQEUE)) != 0){
         err_sys("Listen failed...\n");
+    }
 
     // 2. Setup event base & add server FD in libevent
     struct event ev_accept;
     base = event_base_new_with_config(NULL);
 
+    //event_set(&ev_accept, server_fd, EV_READ | EV_PERSIST, on_accept_cb, base);
+    //event_base_set(base, &ev_accept);
+    event_assign(&ev_accept, base, server_fd, EV_READ | EV_PERSIST, on_accept_cb, base);
 
-    printf("%p\n", &on_accept_cb);
-    printf("%p\n", &signal_cb);
-
-    event_set(&ev_accept, server_fd, EV_READ | EV_PERSIST, on_accept_cb, base);
-    event_base_set(base, &ev_accept);
     if (event_add(&ev_accept, NULL) < 0)
         err_sys("Failed to add server socket in libevent");
+
+    event_base_dump_events(base, stdout);
 
     // 3.1 Add some event handlings
     if (event_add(evsignal_new(base, SIGINT, signal_cb, (void *)base), NULL) < 0)
         err_sys("Failed to add SIGINT handling.");
+    event_base_dump_events(base, stdout);
+
     if (event_add(evsignal_new(base, SIGUSR1, signal_cb, (void *)base), NULL) < 0)
         err_sys("Failed to add SIGUSR1 handling."); // kill -SIGUSR1 <pid>
-
-
     event_base_dump_events(base, stdout);
 
 
