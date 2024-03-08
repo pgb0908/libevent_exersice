@@ -102,7 +102,6 @@ void on_read_cb(int fd, short events, void *arg)
 // handles any data read from client.
 void on_accept_cb(int fd, short events, void *arg)
 {
-    event_base_dump_events(base, stdout);
 
     struct event_base *libevbase = (struct event_base *)arg;
     int client_fd;
